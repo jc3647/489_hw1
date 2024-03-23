@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<robot name="table">
+  <link name="baseLink">
+    <visual>
+      <geometry>
+        <box size="1.0 2.0 .95"/> <!-- Adjust the size as needed -->
+      </geometry>
+      <material name="white">
+        <color rgba="1 1 1 1"/> <!-- Color the table white -->
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="1.0 2.0 .95"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>
