@@ -15,7 +15,7 @@ p.setGravity(0,0,-9.8)
 
 """Load joint angles from a specified file."""
 joint_angles_list = []
-file_path = "/home/liam/Documents/phd/classes/Robot_learning/planning/joint_space_full_traj/shortest_path_env_0_goal_0_traj_1.txt"
+file_path = "/home/lab/489_hw1/planning/joint_space_full_traj/shortest_path_env_0_goal_0_traj_1.txt"
 with open(file_path, 'r') as file:
     lines = file.readlines()
     
