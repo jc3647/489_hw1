@@ -27,20 +27,24 @@ class DiscreteXArm7GymEnv(gym.Env):
         # Observation space representing the 3D position of the gripper
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32)
 
+        # make this dynamic
+        self.goal_state = [0.4919206904119892, -0.32300503747796676, 1.1]
+
+
     def step(self, action):
         # Map the action to a change in gripper position
         delta = np.zeros(3)
-        if action == 1:
+        if action == 0:
             delta[0] += self.step_size  # Move +X
-        elif action == 2:
+        elif action == 1:
             delta[0] -= self.step_size  # Move -X
-        elif action == 3:
+        elif action == 2:
             delta[1] += self.step_size  # Move +Y
-        elif action == 4:
+        elif action == 3:
             delta[1] -= self.step_size  # Move -Y
-        elif action == 5:
+        elif action == 4:
             delta[2] += self.step_size  # Move +Z
-        elif action == 6:
+        elif action == 5:
             delta[2] -= self.step_size  # Move -Z
         # action == 0 is no-op
 
@@ -48,11 +52,40 @@ class DiscreteXArm7GymEnv(gym.Env):
         new_pose = current_pose + delta
         self.simulation.set_gripper_position(new_pose)
         # Implement reward calculation, check if the episode is done, etc.
-        reward = 0
+
+        # reward is distance to goal
+        distance = np.sqrt((self.goal_state[0] - new_pose[0])**2 +
+                           (self.goal_state[1] - new_pose[1])**2 +
+                            (self.goal_state[2] - new_pose[2])**2)
+        
+        reward = -distance
         done = False
         info = {}
 
         return self.get_current_gripper_pose(), reward, done, info
+
+    def greedy_action(self, state, goal_state):
+        lst = []
+        for action in range(6):
+            delta = np.zeros(3)
+            if action == 0:
+                delta[0] += self.step_size
+            elif action == 1:
+                delta[0] -= self.step_size
+            elif action == 2:
+                delta[1] += self.step_size
+            elif action == 3:
+                delta[1] -= self.step_size
+            elif action == 4:
+                delta[2] += self.step_size
+            elif action == 5:
+                delta[2] -= self.step_size
+            new_pose = state + delta
+            distance = np.linalg.norm(new_pose - goal_state)
+            lst.append((distance, action))
+
+        return min(lst)[1]
+
 
     def reset(self):
         # Reset simulation and return initial observation

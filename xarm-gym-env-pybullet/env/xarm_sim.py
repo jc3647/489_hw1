@@ -105,8 +105,8 @@ class XArm7Sim(object):
             orn = [1, 0, 0, 0]
 
             # print("pos: ", pos)
-            cart = self.get_fk(pos)
-            print("cart: ", cart)
+            # cart = self.get_fk(pos)
+            # print("cart: ", cart)
             if useNullSpace:
                 jointPoses = self.bullet_client.calculateInverseKinematics(self.xarm, xarmEndEffectorIndex, pos, orn,
                                                                            lowerLimits=ll,
