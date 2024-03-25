@@ -19,24 +19,15 @@ def load_model(p, model_path, position, orientation=(0, 0, 0, 1)):
 def main(p, env=1):
     parser = argparse.ArgumentParser()
 
-    model_subdirs = ["/home/lab/489_hw1/config/box/model.sdf",
-                     "/home/lab/489_hw1/config/box_2/model.sdf",
-                    "/home/lab/489_hw1/config/box_3/model.sdf",
-                    "/home/lab/489_hw1/config/box_4/model.sdf",
-                    "/home/lab/489_hw1/config/decoys/model1.sdf",
-                    "/home/lab/489_hw1/config/decoys/model2.sdf",
-                    "/home/lab/489_hw1/config/decoys/model3.sdf",
-                    "/home/lab/489_hw1/config/decoys/model4.sdf"
+    model_subdirs = ["/home/jacky/GitHub/489_hw1/xarm-gym-env-pybullet/env/config/box/model.sdf",
+                     "/home/jacky/GitHub/489_hw1/xarm-gym-env-pybullet/env/config/box_2/model.sdf",
+                    "/home/jacky/GitHub/489_hw1/xarm-gym-env-pybullet/env/config/box_3/model.sdf",
+                    "/home/jacky/GitHub/489_hw1/xarm-gym-env-pybullet/env/config/box_4/model.sdf",
+                    "/home/jacky/GitHub/489_hw1/xarm-gym-env-pybullet/env/config/decoys/model1.sdf",
+                    "/home/jacky/GitHub/489_hw1/xarm-gym-env-pybullet/env/config/decoys/model2.sdf",
+                    "/home/jacky/GitHub/489_hw1/xarm-gym-env-pybullet/env/config/decoys/model3.sdf",
+                    "/home/jacky/GitHub/489_hw1/xarm-gym-env-pybullet/env/config/decoys/model4.sdf"
     ]
-
-    # model_subdirs = ["/home/liam/dev_ws/src/TAMER/tamer/env/config/box/model.sdf",
-    #                  "/home/liam/dev_ws/src/TAMER/tamer/env/config/box_2/model.sdf",
-    #                  "/home/liam/dev_ws/src/TAMER/tamer/env/config/box_3/model.sdf",
-    #                  "/home/liam/dev_ws/src/TAMER/tamer/env/config/box_4/model.sdf",
-    #                  "/home/liam/dev_ws/src/TAMER/tamer/env/config/decoys/model1.sdf",
-    #                  "/home/liam/dev_ws/src/TAMER/tamer/env/config/decoys/model2.sdf",
-    #                  "/home/liam/dev_ws/src/TAMER/tamer/env/config/decoys/model3.sdf",
-    #                  "/home/liam/dev_ws/src/TAMER/tamer/env/config/decoys/model4.sdf"]
 
     # Initialize PyBullet
     p.setAdditionalSearchPath(pybullet_data.getDataPath())  # Optionally set a search path for PyBullet to find URDFs
@@ -44,14 +35,14 @@ def main(p, env=1):
     # Load the table (cube) beneath the robot and objects
     table_position = [0, 0, 0.5]  # Adjust the position as needed
     table_orientation = p.getQuaternionFromEuler([0, 0, 0])
-    table_id = p.loadURDF("/home/lab/489_hw1/xarm-gym-env-pybullet/env/table.urdf", table_position, table_orientation, useFixedBase=True)
+    table_id = p.loadURDF("/env/table.urdf", table_position, table_orientation, useFixedBase=True)
     # table_id = p.loadURDF("/home/liam/dev_ws/src/TAMER/tamer/env/table.urdf", table_position, table_orientation, useFixedBase=True)
     # Load configuration files
     # with open('/home/liam/dev_ws/src/TAMER/tamer/env/config/pickup_position.yaml', 'r') as file:
-    with open('/home/lab/489_hw1/xarm-gym-env-pybullet/env/config/pickup_position.yaml', 'r') as file:
+    with open('/home/jacky/GitHub/489_hw1/xarm-gym-env-pybullet/env/config/pickup_position.yaml', 'r') as file:
         pickup_position = yaml.safe_load(file)
 
-    with open('/home/lab/489_hw1/xarm-gym-env-pybullet/env/config/goals.yaml', 'r') as file:
+    with open('/home/jacky/GitHub/489_hw1/xarm-gym-env-pybullet/env/config/goals.yaml', 'r') as file:
     # with open('/home/liam/dev_ws/src/TAMER/tamer/env/config/goals.yaml', 'r') as file:
         goals = yaml.safe_load(file)
 
