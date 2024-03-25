@@ -15,8 +15,8 @@ ikSolver = 0
 xarmEndEffectorIndex = 7
 xarmNumDofs = 7
 
-DEMO_DIR = '/home/lab/489_hw1/planning/joint_space_full_traj'
-URDF_PATH = '/home/lab/489_hw1/xarm-gym-env-pybullet/env/xarm7_pd.urdf'
+DEMO_DIR = '~home/jacky/GitHub/489_hw1/planning/joint_space_full_traj'
+URDF_PATH = '/env/xarm7_pd.urdf'
 
 # DEMO_DIR = '/home/liam/Documents/phd/classes/Robot_learning/planning/joint_space_full_traj/'
 # URDF_PATH = '/home/liam/dev_ws/src/TAMER/tamer/env/xarm7_pd.urdf'

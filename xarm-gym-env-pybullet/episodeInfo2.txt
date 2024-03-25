@@ -11,3 +11,10 @@ Episode 0, Goal reached at timestep: 221, States explored: 223
 Episode 1, Goal reached at timestep: 334, States explored: 559
 Episode 2, Goal reached at timestep: 280, States explored: 840
 Episode 0, Goal reached at timestep: 244, States explored: 246
+Episode 0, Goal reached at timestep: 354, States explored: 356
+Episode 1, Goal reached at timestep: 279, States explored: 636
+Episode 2, Goal reached at timestep: 417, States explored: 1054
+Episode 0, Goal reached at timestep: 274, States explored: 276
+Episode 1, Goal reached at timestep: 272, States explored: 550
+Episode 2, Goal reached at timestep: 130, States explored: 682
+Episode 0, Goal reached at timestep: 317, States explored: 318
