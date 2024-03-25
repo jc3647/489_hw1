@@ -56,6 +56,8 @@ class SophiesKitchenTamerRL():
 
     def choose_action(self, state, testing=False, policy=None):
 
+        state = self.discretize_state(state)
+
         # test out extracted policy
         if testing:
             if state not in policy.keys():
@@ -67,7 +69,7 @@ class SophiesKitchenTamerRL():
         else:
             if self.q_table.get(state) is None:
                 self.q_table[state] = np.random.uniform(low=-0.2, high=0.2, size=(self.num_actions))
-            q_values = self.q_table[state]
+            q_values = self.q_table[state] # goal_state - current_state
             action_probabilities = softmax(q_values)
             action = np.random.choice(self.num_actions, p=action_probabilities)
             return action
@@ -91,14 +93,14 @@ class SophiesKitchenTamerRL():
             best_action = np.argmax(action_values)
             policy[state] = best_action
 
-        with open(filename, 'w') as file:
-            json.dump(policy, file)
+        np.save(filename, policy)
 
     def train(self, goal_position):
 
         origin = self.env.get_current_gripper_pose()
 
         for episode in range(self.episodes):
+
             count = 0
             tmp = self.env.reset()[0]
             self.discretize_state(tmp)
@@ -128,17 +130,18 @@ class SophiesKitchenTamerRL():
                 # if distance between current state and the goal is less than 0.12, then break
                 if np.linalg.norm(np.array([state]) - goal_position) < 0.12:
 
-                    with open("episodeInfo1.txt", "a") as file:
+                    with open("episodeInfo2.txt", "a") as file:
                         message = f"Episode {episode}, Goal reached at timestep: {count}, States explored: {len(self.q_table)}\n"
                         print(message)
                         file.write(message)
                     
                     self.env.set_gripper_position(origin)
                     time.sleep(1)
+                    break
 
                 count += 1
 
-        self.extract_policy('greedyHumanPolicy1.json')
+        self.extract_policy('greedyHumanPolicy1')
 
         self.env.close()
 
@@ -164,6 +167,7 @@ class SophiesKitchenTamerRL():
                     
                     self.env.set_gripper_position(origin)
                     time.sleep(1)
+                    break
 
                 count += 1
 
@@ -171,6 +175,10 @@ class SophiesKitchenTamerRL():
 
 
 
-test = SophiesKitchenTamerRL()
-# test.train(np.array([0.4919206904119892, -0.32300503747796676, 1.1]))
+test = SophiesKitchenTamerRL(episodes=3)
+test.train(np.array([0.4919206904119892, -0.32300503747796676, 1.1]))
 # test.test(np.array([0.4919206904119892, -0.32300503747796676, 1.1]))
+        
+
+read_dictionary = np.load('greedyHumanPolicy1.npy',allow_pickle='TRUE').item()
+print(read_dictionary)
