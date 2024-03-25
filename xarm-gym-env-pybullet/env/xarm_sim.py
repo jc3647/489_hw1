@@ -90,7 +90,7 @@ class XArm7Sim(object):
 
     def get_fk(self, jointPoses):
         for i in range(xarmNumDofs):
-            print(jointPoses)
+            # print(jointPoses)
             self.bullet_client.setJointMotorControl2(self.xarm, i + 1, self.bullet_client.POSITION_CONTROL,
                                                      jointPoses[i], force=5 * 240.)
         self.bullet_client.stepSimulation()
@@ -105,7 +105,7 @@ class XArm7Sim(object):
             orn = [1, 0, 0, 0]
 
             # print("pos: ", pos)
-            # cart = self.get_fk(pos)
+            cart = self.get_fk(pos)
             # print("cart: ", cart)
             if useNullSpace:
                 jointPoses = self.bullet_client.calculateInverseKinematics(self.xarm, xarmEndEffectorIndex, pos, orn,
