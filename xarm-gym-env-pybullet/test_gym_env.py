@@ -4,6 +4,7 @@ from spawn_goals import main, delete_model
 import numpy as np
 import time
 import json
+import random
 
 env = gym.make('DiscreteXArm7-v0')
 
@@ -13,7 +14,7 @@ def softmax(x):
     return e_x / e_x.sum(axis=0)
 
 class SophiesKitchenTamerRL():
-    def __init__(self, episodes=1000, epsilon=0.2, alpha=0.1, gamma=0.99, N=100, num_actions=6):
+    def __init__(self, episodes=1000, epsilon=0.2, alpha=0.1, gamma=0.99, N=10, num_actions=6):
         self.env = env
         self.N = N
         self.num_actions = num_actions
@@ -35,34 +36,44 @@ class SophiesKitchenTamerRL():
     def update_feedback_history(self, state, action, feedback):
         # TODO
         state = self.discretize_state(state)
-        if self.historical_feedback.get(state) is None:
-            self.historical_feedback[state] = np.random.uniform(low=-0.2, high=0.2, size=(self.num_actions))
-        self.historical_feedback[state][action] = feedback
+        key = (state, action)
+        if self.historical_feedback.get(key) is None:
+            self.historical_feedback[key] = []
+        self.historical_feedback[key].append(feedback)
 
+    # TAMER
     def estimate_feedback_for_action(self, state):
-        # TODO
-        pass
+        feedback_estimates = np.zeros(self.num_actions)
+        state = self.discretize_state(state)
 
-    # Incorporate TAMER to rest of the pipeline
+        for action in range(self.num_actions):
+            key = (state, action)
+            if key in self.historical_feedback:
+                feedback_estimates[action] = np.mean(self.historical_feedback[key])
+            else:
+                feedback_estimates[action] = 0
+        
+        return feedback_estimates
+
 
     def discretize_state(self, state):
         discretized_state = []
         for i, key in enumerate(self.bounds.keys()):
             min_bound, max_bound = self.bounds[key]
-            # print("state[i]: ", state[i], min_bound)
             scaling = (state[i] - min_bound) / (max_bound - min_bound)
-            # print("scaling: ", scaling, i)
             discretized_state.append(int(scaling * self.N))
         return tuple(discretized_state)
 
-    def choose_action(self, state, testing=False, policy=None):
+    def choose_action(self, state, testing=False, policy=None, tamer=False):
 
         state = self.discretize_state(state)
+        expected_feedback = np.zeros(self.num_actions)
 
         # test out extracted policy
         if testing:
             if state not in policy.keys():
-                return np.random.choice(self.num_actions)
+                closest_state = min(policy.keys(), key=lambda x: np.linalg.norm(np.array(x) - np.array(state)))
+                return policy[closest_state]
             return policy[state]
 
         if np.random.random() < self.epsilon:
@@ -70,7 +81,11 @@ class SophiesKitchenTamerRL():
         else:
             if self.q_table.get(state) is None:
                 self.q_table[state] = np.random.uniform(low=-0.2, high=0.2, size=(self.num_actions))
-            q_values = self.q_table[state]
+            
+            if tamer:
+                expected_feedback = self.estimate_feedback_for_action(state)
+            
+            q_values = self.q_table[state] + expected_feedback
             action_probabilities = softmax(q_values)
             action = np.random.choice(self.num_actions, p=action_probabilities)
             return action
@@ -96,7 +111,7 @@ class SophiesKitchenTamerRL():
 
         np.save(filename, policy)
 
-    def train(self):
+    def train(self, sophie=False, tamer=False):
 
         origin = self.env.get_current_gripper_pose()
 
@@ -104,15 +119,16 @@ class SophiesKitchenTamerRL():
 
             # save a new policy every 50 episodes
             if episode % 50 == 0:
-                self.extract_policy(f'greedyHumanPolicy{episode}')
+                self.extract_policy(f'greedyHumanPolicy{episode}TamerSophieStep0.1N10')
 
             if episode == 5:
-                self.extract_policy('greedyHumanPolicy5')
+                self.extract_policy('greedyHumanPolicy5TamerSophieStep0.1N10')
 
 
             count = 0
             tmp = self.env.reset()[0]
             state = np.array(list(tmp))
+            prev = None
             done = False
 
             random_env = np.random.choice([1, 2, 3])
@@ -120,30 +136,35 @@ class SophiesKitchenTamerRL():
             random_goal = np.random.choice([0, 1, 2])
             goal_state = np.array(new_goals_positions[random_goal])
             decoy_locations = new_goals_positions[4:]
-
-            # print("random goal state: ", goal_state)
+            total_reward = 0
 
             self.env.update_goal_state(goal_state)
 
             while not done:
+                
+                # TAMER
+                human_feedback = 0
+                if tamer and prev is not None and np.random.random() < self.epsilon:
+                    # give me max length of all values in self.history_feedback.values()
+                    human_feedback = random.uniform(0, 1)
+                    # human provides positive feedback if the new state is closer to the goal, else negative feedback
+                    if prev is not None and np.linalg.norm(np.array([state]) - goal_state) < np.linalg.norm(np.array([prev]) - goal_state):
+                        self.update_feedback_history(prev, action, human_feedback)
+                    else:
+                        self.update_feedback_history(prev, action, -human_feedback)
+
 
                 # think of goal_state as the origin, and transformed_state to be relative to goal_state
                 transformed_state = state - goal_state
-                # print("transformed state: ", transformed_state)
                 guidance = False
 
-                # for strictly Q-learning
-                # action = self.choose_action(state)
-                # for strictly greedy
-                # action = self.env.greedy_action(state)
-                # guidance = True
-
-                if np.random.random() < self.epsilon:
+                if sophie and np.random.random() < self.epsilon:
                         action = self.env.greedy_action(state)
                         guidance = True
                 else:  
-                    action = self.choose_action(transformed_state) 
+                    action = self.choose_action(transformed_state, tamer=tamer) 
                 observation, reward, done, info = self.env.step(action)
+                total_reward += reward
                 if guidance:
                     reward += abs(0.5*reward)
 
@@ -152,13 +173,53 @@ class SophiesKitchenTamerRL():
                 transformed_observation = observation - goal_state
                     
                 self.update_q_table(transformed_state, action, reward, transformed_observation, self.alpha, self.gamma)
+                prev = state
                 state = observation
 
                 # got close enough to end goal
-                # print("current state: ", state, "goal state: ", goal_state)
-                # print("distance to goal: ", np.linalg.norm(np.array([state]) - goal_state))
                 if np.linalg.norm(np.array([state]) - goal_state) < 0.05:
-                    with open("episodeInfo2.txt", "a") as file:
+                    with open("episodeInfoTamerSophieStep0.1N10.txt", "a") as file:
+                        message = f"Episode {episode}, Goal reached at timestep: {count}, States explored: {len(self.q_table)}, Total reward: {total_reward}\n"
+                        print(message)
+                        file.write(message)
+                    for obj in new_goals:
+                        delete_model(self.env.simulation.bullet_client, obj[0])
+                    self.env.set_gripper_position(origin)
+                    time.sleep(1)
+                    break
+
+                count += 1
+
+        self.extract_policy('greedyHumanPolicyTamerSophieStep0.1N10')
+
+        self.env.close()
+
+    def test(self, policy):
+        origin = self.env.get_current_gripper_pose()
+
+        for episode in range(1):
+            count = 0
+            tmp = self.env.reset()[0]
+            state = np.array(list(tmp))
+            done = False
+
+            random_env = np.random.choice([1, 2, 3])
+            new_goals, new_goals_positions  = main(p=self.env.simulation.bullet_client, env=random_env)
+            test_goal = np.random.choice([3])
+            goal_state = np.array(new_goals_positions[test_goal])
+            decoy_locations = new_goals_positions[4:]
+            self.env.update_goal_state(goal_state)
+
+            while not done:
+
+                transformed_state = state - goal_state
+
+                action = self.choose_action(transformed_state, testing=True, policy=policy)
+                observation, reward, done, info = self.env.step(action)
+                state = observation
+
+                if np.linalg.norm(np.array([state]) - goal_state) < 0.05:
+                    with open("trainedInfo1.txt", "a") as file:
                         message = f"Episode {episode}, Goal reached at timestep: {count}, States explored: {len(self.q_table)}\n"
                         print(message)
                         file.write(message)
@@ -170,43 +231,13 @@ class SophiesKitchenTamerRL():
 
                 count += 1
 
-        self.extract_policy('greedyHumanPolicy2')
-
-        self.env.close()
-
-    def test(self, policy, goal_position):
-        origin = self.env.get_current_gripper_pose()
-        for episode in range(1):
-            count = 0
-            tmp = self.env.reset()[0]
-            self.discretize_state(tmp)
-            state = tmp
-            done = False
-
-            while not done:
-                action = self.choose_action(state, testing=True, policy=policy)
-                observation, reward, done, info = self.env.step(action)
-                state = observation
-
-                if np.linalg.norm(np.array([state]) - goal_position) < 0.12:
-                    with open("trainedInfo1.txt", "a") as file:
-                        message = f"Episode {episode}, Goal reached at timestep: {count}, States explored: {len(self.q_table)}\n"
-                        print(message)
-                        file.write(message)
-                    
-                    self.env.set_gripper_position(origin)
-                    time.sleep(1)
-                    break
-
-                count += 1
-
         self.env.close()
 
 
 
-test = SophiesKitchenTamerRL(episodes=1000000000)
-test.train()
+test = SophiesKitchenTamerRL(episodes=500)
+test.train(tamer=True, sophie=True)
 # test.test(np.array([0.4919206904119892, -0.32300503747796676, 1.1]))
         
-# read_dictionary = np.load('greedyHumanPolicy1.npy',allow_pickle='TRUE').item()
-# print(read_dictionary)
+# read_dictionary = np.load('greedyHumanPolicy700N10.npy',allow_pickle='TRUE').item()
+# test.test(read_dictionary)
