@@ -27,11 +27,13 @@ class DiscreteXArm7GymEnv(gym.Env):
         # Observation space representing the 3D position of the gripper
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32)
 
-        # make this dynamic
-        self.goal_state = [0.4919206904119892, -0.32300503747796676, 1.1]
+        self.goal_state = None
 
+    def update_goal_state(self, goal_state):
+        self.goal_state = goal_state
 
     def step(self, action):
+
         # Map the action to a change in gripper position
         delta = np.zeros(3)
         if action == 0:
@@ -51,6 +53,7 @@ class DiscreteXArm7GymEnv(gym.Env):
         current_pose = self.simulation.get_current_gripper_pose()
         new_pose = current_pose + delta
         self.simulation.set_gripper_position(new_pose)
+
         # Implement reward calculation, check if the episode is done, etc.
 
         # reward is distance to goal
@@ -64,7 +67,7 @@ class DiscreteXArm7GymEnv(gym.Env):
 
         return self.get_current_gripper_pose(), reward, done, info
 
-    def greedy_action(self, state, goal_state):
+    def greedy_action(self, state):
         lst = []
         for action in range(6):
             delta = np.zeros(3)
@@ -81,7 +84,7 @@ class DiscreteXArm7GymEnv(gym.Env):
             elif action == 5:
                 delta[2] -= self.step_size
             new_pose = state + delta
-            distance = np.linalg.norm(new_pose - goal_state)
+            distance = np.linalg.norm(self.goal_state - new_pose)
             lst.append((distance, action))
 
         return min(lst)[1]

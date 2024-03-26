@@ -1,12 +1,12 @@
 import gym
 import register_xarm_gym
-from spawn_goals import main
+from spawn_goals import main, delete_model
 import numpy as np
 import time
 import json
 
 training_env = {
-    'env1': np.array([[0.642, -0.183, 0.245], 
+    1: np.array([[0.642, -0.183, 0.245], 
                      [0.642, -0.066, 0.245],
                      [0.642, 0.05, 0.245], 
                      [0.642, 0.165, 0.245],
@@ -16,7 +16,7 @@ training_env = {
                      [0.6653306329259997, 0.22249670486051398, 0.14575486386148848]
                      ]),
 
-    'env2': np.array([[0.642, -0.183, 0.345], 
+    2: np.array([[0.642, -0.183, 0.345], 
                      [0.542, -0.066, 0.245],
                      [0.642, 0.05, 0.345], 
                      [0.542, 0.165, 0.245],
@@ -26,7 +26,7 @@ training_env = {
                      [0.5786652217141348, 0.12520784555481557, 0.3258326132562337]
                      ]),
 
-    'env3': np.array([[0.542, -0.183, 0.145],
+    3: np.array([[0.542, -0.183, 0.145],
                      [0.642, -0.066, 0.245],
                      [0.642, 0.05, 0.245],
                      [0.542, 0.165, 0.145],
@@ -59,8 +59,19 @@ class SophiesKitchenTamerRL():
             'y': (-1.198, 0.211),
             'z': (0.937, 1.735),
         }
+        self.goal_locations = training_env
 
-        main(p=env.simulation.bullet_client, env=np.random.choice([2]))
+        # for i in range(5):
+        #     random_env = int(np.random.choice([1, 2, 3]))
+        #     objects = main(p=self.env.simulation.bullet_client, env=random_env)
+        #     print("objects: ", objects)
+        #     time.sleep(2)
+        #     for obj in objects:
+        #         print("curr obj: ", obj)
+        #         delete_model(self.env.simulation.bullet_client, obj[0])
+
+
+        # main(p=env.simulation.bullet_client, env=np.random.choice([1, 2, 3]))
 
         # TAMER
         self.historical_feedback = {}
@@ -102,11 +113,11 @@ class SophiesKitchenTamerRL():
         else:
             if self.q_table.get(state) is None:
                 self.q_table[state] = np.random.uniform(low=-0.2, high=0.2, size=(self.num_actions))
-            q_values = self.q_table[state] # goal_state - current_state
+            q_values = self.q_table[state]
             action_probabilities = softmax(q_values)
             action = np.random.choice(self.num_actions, p=action_probabilities)
             return action
-            # return np.argmax(self.q_table[state])
+            # return np.argmax(self.q_table[transformed_state])
         
     def update_q_table(self, state, action, reward, next_state, alpha, gamma):
         discrete_state = self.discretize_state(state)
@@ -128,7 +139,7 @@ class SophiesKitchenTamerRL():
 
         np.save(filename, policy)
 
-    def train(self, goal_position):
+    def train(self):
 
         origin = self.env.get_current_gripper_pose()
 
@@ -136,38 +147,65 @@ class SophiesKitchenTamerRL():
 
             count = 0
             tmp = self.env.reset()[0]
-            self.discretize_state(tmp)
-            state = tmp
+            # self.discretize_state(tmp)
+            state = np.array(list(tmp))
             done = False
 
+            random_env = np.random.choice([1, 2, 3])
+            # random_goal = np.random.choice([0, 1, 2])
+            # goal_state = self.goal_locations[random_env][:4][random_goal]
+            # decoy_locations = self.goal_locations[random_env][4:]
+
+            new_goals, new_goals_positions  = main(p=self.env.simulation.bullet_client, env=random_env)
+            random_goal = np.random.choice([0, 1, 2])
+            goal_state = np.array(new_goals_positions[random_goal])
+            decoy_locations = new_goals_positions[4:]
+
+            print("random goal state: ", goal_state)
+
+            self.env.update_goal_state(goal_state)
+
             while not done:
+
+                # think of goal_state as the origin, and transformed_state to be relative to goal_state
+                transformed_state = state - goal_state
+                print("transformed state: ", transformed_state)
                 guidance = False
 
-                # action = self.env.choose_action(state)
+                # for strictly Q-learning
+                # action = self.choose_action(state)
+                # for strictly greedy
+                action = self.env.greedy_action(state)
+                guidance = True
 
-                if np.random.random() < self.epsilon:
-                        action = self.env.greedy_action(state, goal_position)
-                        guidance = True
-                else:  
-                    action = self.choose_action(state) 
+                # if np.random.random() < self.epsilon:
+                #         action = self.env.greedy_action(state)
+                #         guidance = True
+                # else:  
+                #     action = self.choose_action(transformed_state) 
 
                 observation, reward, done, info = self.env.step(action)
                 if guidance:
                     reward += abs(0.5*reward)
 
                 # print(observation, reward, done, info)
+                
+                transformed_observation = observation - goal_state
                     
-                self.update_q_table(state, action, reward, observation, self.alpha, self.gamma)
+                self.update_q_table(transformed_state, action, reward, transformed_observation, self.alpha, self.gamma)
+                print("goal state in xarm: ", self.env.goal_state)
                 state = observation
 
-                # if distance between current state and the goal is less than 0.12, then break
-                if np.linalg.norm(np.array([state]) - goal_position) < 0.12:
-
+                # got close enough to end goal
+                print("current state: ", state, "goal state: ", goal_state)
+                # print("distance to goal: ", np.linalg.norm(np.array([state]) - goal_state))
+                if np.linalg.norm(np.array([state]) - goal_state) < 0.12:
                     with open("episodeInfo2.txt", "a") as file:
                         message = f"Episode {episode}, Goal reached at timestep: {count}, States explored: {len(self.q_table)}\n"
                         print(message)
                         file.write(message)
-                    
+                    for obj in new_goals:
+                        delete_model(self.env.simulation.bullet_client, obj[0])
                     self.env.set_gripper_position(origin)
                     time.sleep(1)
                     break
@@ -208,9 +246,9 @@ class SophiesKitchenTamerRL():
 
 
 
-test = SophiesKitchenTamerRL(episodes=3)
-test.train(np.array([0.4919206904119892, -0.32300503747796676, 1.1]))
+test = SophiesKitchenTamerRL(episodes=1000)
+test.train()
 # test.test(np.array([0.4919206904119892, -0.32300503747796676, 1.1]))
         
-read_dictionary = np.load('greedyHumanPolicy1.npy',allow_pickle='TRUE').item()
-print(read_dictionary)
+# read_dictionary = np.load('greedyHumanPolicy1.npy',allow_pickle='TRUE').item()
+# print(read_dictionary)

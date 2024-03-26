@@ -8,13 +8,18 @@ def load_model(p, model_path, position, orientation=(0, 0, 0, 1)):
     Load a model in PyBullet.
     """
     # PyBullet adds a model to the simulation and returns its unique ID
-    print(position, orientation)
     model_id = p.loadSDF(model_path)
     if len(model_id) ==0:
         return 0
     p.resetBasePositionAndOrientation(model_id[0], posObj=list(position), ornObj=list(orientation))
     return model_id
 
+
+def delete_model(p, model_id):
+    """
+    Delete a model from the simulation.
+    """
+    p.removeBody(model_id)
 
 def main(p, env=1):
     parser = argparse.ArgumentParser()
@@ -53,16 +58,25 @@ def main(p, env=1):
         return
     decoys_seen = 0
     # Spawn entities based on the selected environment configuration
+
+    new_goals = []
+    new_goals_positions = []
+
     for key, value in goals[env_key].items():
         model_name = key
         index = int(model_name.split("d")[-1])
         model_path = model_subdirs[index-1]
         position = (value[1] - 0.2, value[0] - 0.5, value[2] + 1.0)  # Adjust positions as necessary
+        print(f"Spawning {model_name} at position {position}.")
 
         # Check if model file exists or adjust the path accordingly
-        load_model(p, model_path, position)
+        new = load_model(p, model_path, position)
+        new_goals.append(new)
+        new_goals_positions.append(position)
 
-    print("Finished spawning entities.")
+    # print("Finished spawning entities.")
+
+    return new_goals, new_goals_positions
 
 
 if __name__ == "__main__":
