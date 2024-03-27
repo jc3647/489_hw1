@@ -119,10 +119,10 @@ class SophiesKitchenTamerRL():
 
             # save a new policy every 50 episodes
             if episode % 50 == 0:
-                self.extract_policy(f'greedyHumanPolicy{episode}TamerSophieStep0.1N10')
+                self.extract_policy(f'greedyHumanPolicy{episode}TamerRealStep0.1N10')
 
             if episode == 5:
-                self.extract_policy('greedyHumanPolicy5TamerSophieStep0.1N10')
+                self.extract_policy('greedyHumanPolicy5TamerRealStep0.01N10')
 
 
             count = 0
@@ -131,9 +131,9 @@ class SophiesKitchenTamerRL():
             prev = None
             done = False
 
-            random_env = np.random.choice([1, 2, 3])
+            random_env = np.random.choice([1, 2])
             new_goals, new_goals_positions  = main(p=self.env.simulation.bullet_client, env=random_env)
-            random_goal = np.random.choice([0, 1, 2])
+            random_goal = np.random.choice([0, 1, 2, 3])
             goal_state = np.array(new_goals_positions[random_goal])
             decoy_locations = new_goals_positions[4:]
             total_reward = 0
@@ -178,7 +178,7 @@ class SophiesKitchenTamerRL():
 
                 # got close enough to end goal
                 if np.linalg.norm(np.array([state]) - goal_state) < 0.05:
-                    with open("episodeInfoTamerSophieStep0.1N10.txt", "a") as file:
+                    with open("episodeInfoTamerRealStep0.1N10.txt", "a") as file:
                         message = f"Episode {episode}, Goal reached at timestep: {count}, States explored: {len(self.q_table)}, Total reward: {total_reward}\n"
                         print(message)
                         file.write(message)
@@ -190,7 +190,7 @@ class SophiesKitchenTamerRL():
 
                 count += 1
 
-        self.extract_policy('greedyHumanPolicyTamerSophieStep0.1N10')
+        self.extract_policy('greedyHumanPolicyTamerRealStep0.1N10')
 
         self.env.close()
 
@@ -203,9 +203,9 @@ class SophiesKitchenTamerRL():
             state = np.array(list(tmp))
             done = False
 
-            random_env = np.random.choice([1, 2, 3])
-            new_goals, new_goals_positions  = main(p=self.env.simulation.bullet_client, env=random_env)
-            test_goal = np.random.choice([3])
+            test_env = np.random.choice([1, 2, 3])
+            new_goals, new_goals_positions  = main(p=self.env.simulation.bullet_client, env=test_env)
+            test_goal = np.random.choice([0, 1, 2, 3])
             goal_state = np.array(new_goals_positions[test_goal])
             decoy_locations = new_goals_positions[4:]
             self.env.update_goal_state(goal_state)
@@ -236,8 +236,12 @@ class SophiesKitchenTamerRL():
 
 
 test = SophiesKitchenTamerRL(episodes=500)
-test.train(tamer=True, sophie=True)
+# test.train(tamer=True, sophie=True)
+# test.train(tamer=True)
+# test.train(sophie=True)
 # test.test(np.array([0.4919206904119892, -0.32300503747796676, 1.1]))
+
+policy = "greedyHumanPolicy1550.npy"
         
-# read_dictionary = np.load('greedyHumanPolicy700N10.npy',allow_pickle='TRUE').item()
-# test.test(read_dictionary)
+read_dictionary = np.load(policy,allow_pickle='TRUE').item()
+test.test(read_dictionary)

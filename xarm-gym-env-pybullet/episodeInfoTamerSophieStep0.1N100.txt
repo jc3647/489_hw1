@@ -1,0 +1,4 @@
+Episode 0, Goal reached at timestep: 251, States explored: 106, Total reward: -57.20393140112864
+Episode 1, Goal reached at timestep: 630, States explored: 273, Total reward: -99.88698557141124
+Episode 0, Goal reached at timestep: 2486, States explored: 413, Total reward: -355.01568280177565
+Episode 1, Goal reached at timestep: 631, States explored: 564, Total reward: -139.10564185561026
